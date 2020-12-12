@@ -18,6 +18,8 @@ from gym import spaces
 
 import gym
 
+
+
 class QuantumGenerator():
 
     """
@@ -82,8 +84,9 @@ class QuantumGenerator():
                 'gate': HGate(),
                 'qubits': [1]
             },
-
         ]
+
+        self.base_gates = self.action_gates_array
 
         # init action gates array by parameters
         if action_gates_array:
@@ -138,6 +141,12 @@ class QuantumGenerator():
         if self.mode != "history":
             self.get_reward = self.get_reward_by_matrix
 
+
+    def generate_dataset():
+        """"""
+        cur_trajectory = []
+        for gate_obj in self.base_gates:
+            cur_trajectory.append(gate)
     
     def init_observation_space(self):
         if self.mode == "history":
