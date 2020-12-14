@@ -142,6 +142,7 @@ for i in range(len(gates_lists)):
     queues.append(q)
     end_queues.append([])
 
+t = 0
 # generation
 while True:
     if len(queues[0]) == 0:
@@ -153,6 +154,9 @@ while True:
         if i == len(queues) - 1:
             for j in range(len(queues[i])):
                 line = [item[0] for item in queues]
+                # print(line)
+                t += 1
+                print(t)
                 queues[i].append(queues[i].pop(0))
                 # pdb.set_trace()
             i -= 1
@@ -160,49 +164,19 @@ while True:
         # if current is one of average index (!= 0 && != - 1)
         elif i != 0:
             #
-            if len(queues[i]) != 0:
-                end_queues[i].append(queues[i].pop())
-                if len(queues[i]) == 0:
-                    for item in end_queues:
-                        queues.append(item)
-                    # come to i - 1 index to process it
-                    i -= 1
-                else:
-                    # come to creating new lines
-                    break
+            # if len(queues[i]) != 0:
+            end_queues[i].append(queues[i].pop())
+            if len(queues[i]) == 0:
+                for _ in range(len(end_queues[i])):
+                    queues[i].append(end_queues[i].pop())
+                # come to i - 1 index to process it
+                i -= 1
             else:
                 # come to creating new lines
                 break
+            # else:
+            #     # come to creating new lines
+            #     break
         else:
             queues[0].pop()
             break
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        # 2. else
-        if i == len(queues) - 1:
-            for j in range(len(queues[i])):
-                line = [item[0] for item in queues]
-                end_queues[i].append(queues[i].pop(0))
-                # pdb.set_trace()
-        elif len(queues[i]) != 0:
-            queues[i].append(queues[i].pop())
-        else:
-            queues[0].pop()
