@@ -1,8 +1,21 @@
 import pandas as pd
 import numpy as np
 from queue import Queue
-import multiprocessing
 import pdb
+import numpy as np
+import pandas as pd
+import pdb
+
+from qiskit import IBMQ, Aer
+from qiskit.providers.ibmq import least_busy
+from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, execute
+# from qiskit_textbook.tools import array_to_latex
+
+from qiskit.circuit.library import HGate, XGate, YGate, ZGate, CXGate
+from qiskit.visualization import plot_histogram
+
+from collections import OrderedDict
+from typing import List
 
 gates_lists = [
     [
@@ -85,12 +98,22 @@ gates_lists = [
     ],
 ]
 
-df = pd.DataFrame({
-    "Gate": [],
-    "Qubits": [],
-    "State": [],
+df = {
+    "Gate": [], # Name of Gate
+    "Qubits": [], # string of qubits
+    "State": [], # Quantum state 
     "ResultState": []
-})
+}
+
+# init unitary simulator
+unitary_backend = Aer.get_backend('unitary_simulator')
+# init unitary simulator
+statevector_backend = Aer.get_backend('statevector_simulator')
+
+def generate_by_line(arr):
+    
+    for item in arr:
+
 
 # inserting gates in their own queue
 queues = []
@@ -109,4 +132,4 @@ while True:
 
     for i in range(len(queues)):
         for _ in range(len(queues[i])):
-            
+            generate_by_line = []

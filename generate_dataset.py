@@ -141,12 +141,27 @@ class QuantumGenerator():
         if self.mode != "history":
             self.get_reward = self.get_reward_by_matrix
 
+    
+    def generate_dataset_for_nn_training(gates_lists):
+        # inserting gates in their own queue
+        queues = []
+        for i in range(len(gates_lists)):
+            q = []
+            for item in gates_lists[i]:
+                q.append(item)
+            queues.append(q)
 
-    def generate_dataset():
-        """"""
-        cur_trajectory = []
-        for gate_obj in self.base_gates:
-            cur_trajectory.append(gate)
+        # generation
+        while True:
+            # for each index of gates_lists 
+            cur_pointer = len(gates_lists) - 1
+            if len(queues[0]) == 0:
+                break
+
+            for i in range(len(queues)):
+                for _ in range(len(queues[i])):
+                    generate_by_line = []
+
     
     def init_observation_space(self):
         if self.mode == "history":
