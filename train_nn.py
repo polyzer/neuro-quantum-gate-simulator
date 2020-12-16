@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from sklearn.preprocessing import LabelBinarizer
 
 import time
 timestr = time.strftime("%Y-%m-%d_%H-%M-%S")
@@ -18,7 +19,10 @@ def unpack_complex_matrix_to_array_of_real_image_numbers_pairs(numpy_complex_mat
     for num in flattened:
         result.append(num.real)
         result.append(num.imag)
-    return np.array(result)
+    return result
+
+def concat_values(line):
+    return line['statevector_unpacked'] + line['gate_onehot'] + line['qubits']
 
 def load_dataset(df_name):
     """
@@ -30,8 +34,12 @@ def load_dataset(df_name):
     df['next_unitary_unpacked'] = df['next_unitary'].apply(unpack_complex_matrix_to_array_of_real_image_numbers_pairs)
     df['statevector_unpacked'] = df['statevector'].apply(unpack_complex_matrix_to_array_of_real_image_numbers_pairs)
     df['next_statevector_unpacked'] = df['next_statevector'].apply(unpack_complex_matrix_to_array_of_real_image_numbers_pairs)
+    df['gate_onehot'] = pd.Series(LabelBinarizer().fit_transform(df.gate).tolist())
 
+    df.apply(concat_values)
     pdb.set_trace()
+    # create dataset for translation [vectorstate, gatename,separator, qubits,separator] -> next_vectorstate
+    # it defined qubits evolution.
 
     return df_train, df_test
 
@@ -56,4 +64,4 @@ class Net(nn.Module):
         x = self.fc3(x)
         return x
 
-df = load_data(df_name)
+df = load_dataset(df_name)
