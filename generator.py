@@ -2,9 +2,10 @@ import pandas as pd
 import numpy as np
 from queue import Queue
 import pdb
-import numpy as np
-import pandas as pd
-import pdb
+import argparse
+
+import time
+timestr = time.strftime("%Y-%m-%d_%H-%M-%S")
 
 from qiskit import IBMQ, Aer
 from qiskit.providers.ibmq import least_busy
@@ -16,6 +17,12 @@ from qiskit.visualization import plot_histogram
 
 from collections import OrderedDict
 from typing import List
+
+parser = argparse.ArgumentParser(description='This script generates quantum gates dataset using Qiskit.')
+
+parser.add_argument('--output_type', default='hdf', type=str)
+
+args = parser.parse_args()
 
 gates_lists = [
     [
@@ -99,10 +106,12 @@ gates_lists = [
 ]
 
 df = {
-    "Gate": [], # Name of Gate
-    "Qubits": [], # string of qubits
-    "State": [], # Quantum state 
-    "ResultState": []
+    "gate": [], # Name of Gate
+    "qubits": [], # string of qubits
+    "statevector": [], # Quantum state 
+    "next_statevector": [],
+    "unitary": [],
+    "next_unitary": []
 }
 
 # init unitary simulator
@@ -120,14 +129,21 @@ statevector_backend = Aer.get_backend('statevector_simulator')
 def generate_by_line(arr, qubits_count):
     qc = QuantumCircuit(qubits_count)
     for item in arr:
-        qubits = "".join(item['qubits'])
+        # pdb.set_trace()
+        qubits = "".join(str(ch) for ch in item['qubits'])
         gate = item['gate'].name
         init_statevector = execute(qc,statevector_backend).result().get_statevector()
         init_unitary = execute(qc,unitary_backend).result().get_unitary()
         qc.unitary(item['gate'], item['qubits'])
         out_statevector = execute(qc,statevector_backend).result().get_statevector()
         out_unitary = execute(qc,unitary_backend).result().get_unitary()
-        pdb.set_trace()
+        df['gate'].append(gate)
+        df['qubits'].append(qubits)
+        df['statevector'].append(init_statevector)
+        df['next_statevector'].append(out_statevector)
+        df['unitary'].append(init_unitary)
+        df['next_unitary'].append(out_unitary)
+        # pdb.set_trace()
         
 
 
@@ -142,8 +158,11 @@ for i in range(len(gates_lists)):
     queues.append(q)
     end_queues.append([])
 
-t = 0
-# generation
+
+# Count of qubits in quantumregister
+qubits_count = 2
+
+# generation algorithm
 while True:
     if len(queues[0]) == 0:
         break
@@ -154,9 +173,10 @@ while True:
         if i == len(queues) - 1:
             for j in range(len(queues[i])):
                 line = [item[0] for item in queues]
+                generate_by_line(line, qubits_count)
                 # print(line)
-                t += 1
-                print(t)
+                # t += 1
+                # print(t)
                 queues[i].append(queues[i].pop(0))
                 # pdb.set_trace()
             i -= 1
@@ -180,3 +200,9 @@ while True:
         else:
             queues[0].pop()
             break
+
+pd_df = pd.DataFrame(df)
+if args.output_type == 'hdf':
+    pd_df.to_hdf(f'quantum_dataset_{timestr}_output.h5', key='df')    
+else:
+    pd_df.to_csv(f'quantum_dataset_{timestr}_output.csv')
