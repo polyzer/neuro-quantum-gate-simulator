@@ -22,7 +22,8 @@ def unpack_complex_matrix_to_array_of_real_image_numbers_pairs(numpy_complex_mat
     return result
 
 def concat_values(line):
-    return line['statevector_unpacked'] + line['gate_onehot'] + line['qubits']
+
+    return line['statevector_unpacked'] + line['gate_onehot'] + line['qubits_onehot']
 
 def load_dataset(df_name):
     """
@@ -35,22 +36,24 @@ def load_dataset(df_name):
     df['statevector_unpacked'] = df['statevector'].apply(unpack_complex_matrix_to_array_of_real_image_numbers_pairs)
     df['next_statevector_unpacked'] = df['next_statevector'].apply(unpack_complex_matrix_to_array_of_real_image_numbers_pairs)
     df['gate_onehot'] = pd.Series(LabelBinarizer().fit_transform(df.gate).tolist())
+    df['qubits_onehot'] = pd.Series(LabelBinarizer().fit_transform(df.qubits).tolist())
 
-    df.apply(concat_values)
-    pdb.set_trace()
+    X = df[['gate_onehot', 'statevector_unpacked', 'qubits_onehot']].apply(concat_values, axis=1)
+    Y = df['next_statevector_unpacked']
     # create dataset for translation [vectorstate, gatename,separator, qubits,separator] -> next_vectorstate
     # it defined qubits evolution.
+    pdb.set_trace()
 
-    return df_train, df_test
+    return [X, Y]
 
 
 
 class Net(nn.Module):
     def __init__(self, l1=120, l2=84):
         super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(3, 6, 5)
-        self.pool = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(6, 16, 5)
+        # self.conv1 = nn.Conv2d(3, 6, 5)
+        # self.pool = nn.MaxPool2d(2, 2)
+        # self.conv2 = nn.Conv2d(6, 16, 5)
         self.fc1 = nn.Linear(16 * 5 * 5, l1)
         self.fc2 = nn.Linear(l1, l2)
         self.fc3 = nn.Linear(l2, 10)
@@ -64,4 +67,6 @@ class Net(nn.Module):
         x = self.fc3(x)
         return x
 
-df = load_dataset(df_name)
+[X, Y] = load_dataset(df_name)
+input_shape = len(X.iloc[0])
+
