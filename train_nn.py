@@ -5,12 +5,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+import tensorflow as tf
 from sklearn.preprocessing import LabelBinarizer
 
 import time
 timestr = time.strftime("%Y-%m-%d_%H-%M-%S")
 
-df_name = 'quantum_dataset_2020-12-15_21-33-20_output.h5'
+df_name = 'quantum_dataset_2020-12-17_17-30-47_output.h5'
 
 
 def unpack_complex_matrix_to_array_of_real_image_numbers_pairs(numpy_complex_matrix):
@@ -42,7 +43,7 @@ def load_dataset(df_name):
     Y = df['next_statevector_unpacked']
     # create dataset for translation [vectorstate, gatename,separator, qubits,separator] -> next_vectorstate
     # it defined qubits evolution.
-    pdb.set_trace()
+    # pdb.set_trace()
 
     return [X, Y]
 
@@ -67,6 +68,21 @@ class Net(nn.Module):
         x = self.fc3(x)
         return x
 
-[X, Y] = load_dataset(df_name)
-input_shape = len(X.iloc[0])
+def get_model(input_shape, output_shape):
+    # This is identical to the following:
+    model = tf.keras.Sequential()
+    model.add(tf.keras.Input(shape=(12,)))
+    model.add(tf.keras.layers.Dense(128))
+    model.add(tf.keras.layers.Dense(256))
+    model.add(tf.keras.layers.Dense(output_shape))
+    model.compile(optimizer='rmsprop', loss='mse')
+    return model
 
+[X, Y] = load_dataset(df_name)
+
+input_shape = (None, len(X.iloc[0]))
+output_shape = len(Y.iloc[0])
+
+model = get_model(input_shape, output_shape)
+# pdb.set_trace()
+model.fit(np.array(X.to_list()), np.array(Y.to_list()), epochs=10, batch_size=128)
