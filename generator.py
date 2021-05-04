@@ -102,6 +102,31 @@ gates_lists = [
             'gate': ZGate(),
             'qubits': [1]
         },
+    ],    [
+        {
+            'gate': XGate(),
+            'qubits': [0]
+        },
+        {
+            'gate': XGate(),
+            'qubits': [1]
+        },
+        {
+            'gate': YGate(),
+            'qubits': [0]
+        },
+        {
+            'gate': YGate(),
+            'qubits': [1]
+        },
+        {
+            'gate': ZGate(),
+            'qubits': [0]
+        },
+        {
+            'gate': ZGate(),
+            'qubits': [1]
+        },
     ],
 ]
 
