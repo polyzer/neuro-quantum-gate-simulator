@@ -72,8 +72,8 @@ def get_model(input_shape, output_shape):
     # This is identical to the following:
     model = tf.keras.Sequential()
     model.add(tf.keras.Input(shape=(12,)))
-    model.add(tf.keras.layers.Dense(128))
-    model.add(tf.keras.layers.Dense(256))
+    model.add(tf.keras.layers.Dense(1024))
+    model.add(tf.keras.layers.Dense(1024))
     model.add(tf.keras.layers.Dense(output_shape))
     model.compile(optimizer='rmsprop', loss='mse')
     return model

@@ -82,31 +82,29 @@ def cliffordt_generator(qubits_count):
             'qubits': [1]    // spedified qubits
         }
 """
-def generate_by_line(arr, qubits_count):
-    qc = QuantumCircuit(qubits_count)
-    for item in tqdm(arr):
-        # pdb.set_trace()
-        qubits = "".join(str(ch) for ch in item['qubits'])
-        gate = item['gate'].name
-        init_statevector = execute(qc,statevector_backend).result().get_statevector()
-        init_unitary = execute(qc,unitary_backend).result().get_unitary()
-        qc.unitary(item['gate'], item['qubits'])
-        out_statevector = execute(qc,statevector_backend).result().get_statevector()
-        out_unitary = execute(qc,unitary_backend).result().get_unitary()
-        df['gate'].append(gate)
-        df['qubits'].append(qubits)
-        df['statevector'].append(init_statevector)
-        df['next_statevector'].append(out_statevector)
-        df['unitary'].append(init_unitary)
-        df['next_unitary'].append(out_unitary)
-        # pdb.set_trace()
+def generate_by_line(qc, item):
+    # pdb.set_trace()
+    qubits = "".join(str(ch) for ch in item['qubits'])
+    gate = item['gate'].name
+    init_statevector = execute(qc,statevector_backend).result().get_statevector()
+    init_unitary = execute(qc,unitary_backend).result().get_unitary()
+    qc.unitary(item['gate'], item['qubits'])
+    out_statevector = execute(qc,statevector_backend).result().get_statevector()
+    out_unitary = execute(qc,unitary_backend).result().get_unitary()
+    df['gate'].append(gate)
+    df['qubits'].append(qubits)
+    df['statevector'].append(init_statevector)
+    df['next_statevector'].append(out_statevector)
+    df['unitary'].append(init_unitary)
+    df['next_unitary'].append(out_unitary)
+    # pdb.set_trace()
 
 
 # Count of qubits in quantumregister
 qubits_count = 3
 list_of_possible_actions = cliffordt_generator(qubits_count)
 gates_lists = []
-for i in range(100):
+for i in range(2):
     le = []
     print(i)
     for j in range(1000):
@@ -116,50 +114,19 @@ for i in range(100):
 
 # inserting gates in their own queue
 queues = []
-end_queues = []
 for i in range(len(gates_lists)):
     q = []
     for item in gates_lists[i]:
         q.append(item)
     queues.append(q)
-    end_queues.append([])
 
 
-# generation algorithm
-while True:
-    if len(queues[0]) == 0:
-        break
-    i = len(queues) - 1
-    while True:
-        # если указатель на последнем индексе!!!
-        # то создаём линии
-        if i == len(queues) - 1:
-            for j in tqdm(range(len(queues[i]))):
-                line = [item[0] for item in queues]
-                generate_by_line(line, qubits_count)
-                queues[i].append(queues[i].pop(0))
-                # pdb.set_trace()
-            i -= 1
-            continue
-        # if current is one of average index (!= 0 && != - 1)
-        elif i != 0:
-            #
-            # if len(queues[i]) != 0:
-            end_queues[i].append(queues[i].pop())
-            if len(queues[i]) == 0:
-                for _ in range(len(end_queues[i])):
-                    queues[i].append(end_queues[i].pop())
-                # come to i - 1 index to process it
-                i -= 1
-            else:
-                # come to creating new lines
-                break
-            # else:
-            #     # come to creating new lines
-            #     break
-        else:
-            queues[0].pop()
-            break
+#generation algorithm
+for q in tqdm(queues):
+    qc = QuantumCircuit(qubits_count)
+    for j in tqdm(q):
+        res = generate_by_line(qc, j)
+
 
 pd_df = pd.DataFrame(df)
 if args.output_type == 'hdf':
