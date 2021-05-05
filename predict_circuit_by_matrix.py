@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 import pdb
+from glob import glob
+import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -11,7 +13,7 @@ from sklearn.preprocessing import LabelBinarizer
 import time
 timestr = time.strftime("%Y-%m-%d_%H-%M-%S")
 
-df_name = 'quantum_dataset_2021-05-04_18-22-34_output.h5'
+dfs_dir = 'datasets'
 
 
 def unpack_complex_matrix_to_array_of_real_image_numbers_pairs(numpy_complex_matrix):
@@ -26,7 +28,7 @@ def concat_values(line):
 
     return line['unitary_unpacked'] + line['next_unitary_unpacked']
 
-def load_dataset(df_name):
+def load_dataset(dfs_dir):
     """
         Loading and preprocessing data.
     """
@@ -34,13 +36,10 @@ def load_dataset(df_name):
     df = pd.read_hdf(df_name)
     df['unitary_unpacked'] = df['unitary'].apply(unpack_complex_matrix_to_array_of_real_image_numbers_pairs)
     df['next_unitary_unpacked'] = df['next_unitary'].apply(unpack_complex_matrix_to_array_of_real_image_numbers_pairs)
-    df['statevector_unpacked'] = df['statevector'].apply(unpack_complex_matrix_to_array_of_real_image_numbers_pairs)
-    df['next_statevector_unpacked'] = df['next_statevector'].apply(unpack_complex_matrix_to_array_of_real_image_numbers_pairs)
-    df['gate_onehot'] = pd.Series(LabelBinarizer().fit_transform(df.gate).tolist())
-    df['qubits_onehot'] = pd.Series(LabelBinarizer().fit_transform(df.qubits).tolist())
+    df['gate_index_onehot'] = pd.Series(LabelBinarizer().fit_transform(df.gate_index).tolist())
 
     X = df[['unitary_unpacked', 'next_unitary_unpacked']].apply(concat_values, axis=1)
-    Y = df['gate_onehot']
+    Y = df['gate_index_onehot']
     # create dataset for translation [vectorstate, gatename,separator, qubits,separator] -> next_vectorstate
     # it defined qubits evolution.
     # pdb.set_trace()

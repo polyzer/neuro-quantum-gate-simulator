@@ -6,7 +6,6 @@ import argparse
 from tqdm import tqdm
 
 import time
-timestr = time.strftime("%Y-%m-%d_%H-%M-%S")
 
 from qiskit import IBMQ, Aer
 from qiskit.providers.ibmq import least_busy
@@ -25,14 +24,6 @@ parser.add_argument('--output_type', default='hdf', type=str)
 
 args = parser.parse_args()
 
-df = {
-    "gate": [], # Name of Gate
-    "qubits": [], # string of qubits
-    "statevector": [], # Quantum state 
-    "next_statevector": [],
-    "unitary": [],
-    "next_unitary": []
-}
 
 # init unitary simulator
 unitary_backend = Aer.get_backend('unitary_simulator')
@@ -71,7 +62,9 @@ def cliffordt_generator(qubits_count):
     all_qubits_pairs = get_all_qubits_pairs(qubits_count)
     for i in range(len(all_qubits_pairs)):
         act_s.append({"gate": CXGate(), "qubits": all_qubits_pairs[i]})  
-
+    
+    for i in range(len(act_s)):
+        act_s[i]['gate_index'] = i
     return act_s
 
 
@@ -83,20 +76,18 @@ def cliffordt_generator(qubits_count):
         }
 """
 def generate_by_line(qc, item):
-    # pdb.set_trace()
-    qubits = "".join(str(ch) for ch in item['qubits'])
-    gate = item['gate'].name
+    gate_index = item['gate_index']
     init_statevector = execute(qc,statevector_backend).result().get_statevector()
     init_unitary = execute(qc,unitary_backend).result().get_unitary()
     qc.unitary(item['gate'], item['qubits'])
     out_statevector = execute(qc,statevector_backend).result().get_statevector()
     out_unitary = execute(qc,unitary_backend).result().get_unitary()
-    df['gate'].append(gate)
-    df['qubits'].append(qubits)
-    df['statevector'].append(init_statevector)
-    df['next_statevector'].append(out_statevector)
-    df['unitary'].append(init_unitary)
-    df['next_unitary'].append(out_unitary)
+    df_item = {
+        'gate_index': gate_index,
+        'unitary': init_unitary,
+        'next_unitary': out_unitary
+    }
+    return df_item
     # pdb.set_trace()
 
 
@@ -104,7 +95,7 @@ def generate_by_line(qc, item):
 qubits_count = 3
 list_of_possible_actions = cliffordt_generator(qubits_count)
 gates_lists = []
-for i in range(2):
+for i in range(20):
     le = []
     print(i)
     for j in range(1000):
@@ -123,13 +114,15 @@ for i in range(len(gates_lists)):
 
 #generation algorithm
 for q in tqdm(queues):
+    df = []
     qc = QuantumCircuit(qubits_count)
     for j in tqdm(q):
-        res = generate_by_line(qc, j)
+        df.append(generate_by_line(qc, j))
+    pd_df = pd.DataFrame(df)
 
-
-pd_df = pd.DataFrame(df)
-if args.output_type == 'hdf':
-    pd_df.to_hdf(f'quantum_dataset_{timestr}_output.h5', key='df')    
-else:
-    pd_df.to_csv(f'quantum_dataset_{timestr}_output.csv')
+    timestr = time.strftime("%Y-%m-%d_%H-%M-%S")
+    
+    if args.output_type == 'hdf':
+        pd_df.to_hdf(f'datasets/quantum_dataset_{timestr}_output.h5', key='df')    
+    else:
+        pd_df.to_csv(f'datasets/quantum_dataset_{timestr}_output.csv')
