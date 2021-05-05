@@ -11,12 +11,12 @@ from qiskit import IBMQ, Aer
 from qiskit.providers.ibmq import least_busy
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, execute
 # from qiskit_textbook.tools import array_to_latex
-
 from qiskit.circuit.library import HGate, XGate, YGate, ZGate, CXGate, SGate, TGate, CXGate
 from qiskit.visualization import plot_histogram
-
 from collections import OrderedDict
 from typing import List
+
+from utils import cliffordt_actions_generator
 
 parser = argparse.ArgumentParser(description='This script generates quantum gates dataset using Qiskit.')
 
@@ -44,28 +44,6 @@ def get_all_qubits_pairs(qubits_count):
     print("All qubits pairs generated")
     return all_qubits_pairs
 
-"""
-    ::arr:: list of objects
-        {
-            'gate': GateName(), // specified gate
-            'qubits': [1]    // spedified qubits
-        }
-"""
-
-def cliffordt_generator(qubits_count):
-    gates = [XGate(), YGate(), ZGate(), HGate()]
-    act_s = []
-
-    for i in range(len(gates)):
-        for j in range(qubits_count):
-            act_s.append({"gate": gates[i], "qubits": [j]})
-    all_qubits_pairs = get_all_qubits_pairs(qubits_count)
-    for i in range(len(all_qubits_pairs)):
-        act_s.append({"gate": CXGate(), "qubits": all_qubits_pairs[i]})  
-    
-    for i in range(len(act_s)):
-        act_s[i]['gate_index'] = i
-    return act_s
 
 
 """
@@ -93,7 +71,7 @@ def generate_by_line(qc, item):
 
 # Count of qubits in quantumregister
 qubits_count = 3
-list_of_possible_actions = cliffordt_generator(qubits_count)
+list_of_possible_actions = cliffordt_actions_generator(qubits_count)
 gates_lists = []
 for i in range(20):
     le = []

@@ -1,21 +1,33 @@
 import pandas as pd
 import numpy as np
 import pdb
-from glob import glob
+import glob
 import os
+import sklearn
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import tensorflow as tf
+from qiskit.circuit.library import HGate, XGate, YGate, ZGate, CXGate, SGate, TGate, CXGate
 from sklearn.preprocessing import LabelBinarizer
+from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, execute
+
+from utils import cliffordt_actions_generator
 
 import time
 timestr = time.strftime("%Y-%m-%d_%H-%M-%S")
 
 dfs_dir = 'datasets'
 
-
+def test_model(model, qubits_count):
+    qc = QuantumCircuit(qubits_count)
+    list_of_possible_actions = cliffordt_actions_generator(qubits_count)
+    for i in range(5):
+        gi = np.random.randint(0, len(list_of_possible_actions))
+        item = list_of_possible_actions[gi]
+        qc.unitary(item['gate'], item['qubits'])
+    out_unitary = execute(qc,unitary_backend).result().get_unitary()
 def unpack_complex_matrix_to_array_of_real_image_numbers_pairs(numpy_complex_matrix):
     flattened = numpy_complex_matrix.flatten()
     result = []
@@ -33,7 +45,17 @@ def load_dataset(dfs_dir):
         Loading and preprocessing data.
     """
     # load raw dataset
-    df = pd.read_hdf(df_name)
+    df = pd.DataFrame({
+        "gate_index": [],
+        "unitary": [],
+        "next_unitary": [],
+    })
+
+    for df_name in glob.glob(os.path.join(dfs_dir, "*.h5")):
+        # pdb.set_trace()
+        dfi = pd.read_hdf(df_name)
+        df = df.append(dfi, ignore_index=True)
+    
     df['unitary_unpacked'] = df['unitary'].apply(unpack_complex_matrix_to_array_of_real_image_numbers_pairs)
     df['next_unitary_unpacked'] = df['next_unitary'].apply(unpack_complex_matrix_to_array_of_real_image_numbers_pairs)
     df['gate_index_onehot'] = pd.Series(LabelBinarizer().fit_transform(df.gate_index).tolist())
@@ -80,11 +102,13 @@ def get_model(input_shape, output_shape):
     model.compile(optimizer='rmsprop', loss='mse')
     return model
 
-[X, Y] = load_dataset(df_name)
+[X, Y] = load_dataset(dfs_dir)
+
+# X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.33, random_state=42)
 
 input_shape = (None, len(X.iloc[0]))
 output_shape = len(Y.iloc[0])
 
 model = get_model(input_shape, output_shape)
 # pdb.set_trace()
-model.fit(np.array(X.to_list()), np.array(Y.to_list()), epochs=50, batch_size=200)
+model.fit(np.array(X.to_list()), np.array(Y.to_list()), validation_split=0.2, epochs=10, batch_size=200)
