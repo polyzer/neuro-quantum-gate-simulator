@@ -18,6 +18,7 @@ from collections import OrderedDict
 from typing import List
 
 from utils import cliffordt_actions_generator
+from metrics import metrics
 
 parser = argparse.ArgumentParser(description='This script generates quantum gates dataset using Qiskit.')
 
@@ -51,7 +52,7 @@ def generate_by_line(qc, item):
         'gate_index': gate_index,
         'unitary': init_unitary,
         'next_unitary': out_unitary,
-        'metric_value', metrics['trace_metric'](init_unitary, target_unitary)
+        'metric_value': metrics['trace_metric'](init_unitary, out_unitary)
     }
     return df_item
     # pdb.set_trace()
