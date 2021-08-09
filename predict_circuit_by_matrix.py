@@ -9,11 +9,19 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import tensorflow as tf
+from qiskit import IBMQ, Aer
+from qiskit.providers.ibmq import least_busy
 from qiskit.circuit.library import HGate, XGate, YGate, ZGate, CXGate, SGate, TGate, CXGate
 from sklearn.preprocessing import LabelBinarizer
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, execute
 
+from metrics import metrics
 from utils import cliffordt_actions_generator
+
+# init unitary simulator
+unitary_backend = Aer.get_backend('unitary_simulator')
+# init unitary simulator
+statevector_backend = Aer.get_backend('statevector_simulator')
 
 import time
 timestr = time.strftime("%Y-%m-%d_%H-%M-%S")
@@ -22,12 +30,37 @@ dfs_dir = 'datasets'
 
 def test_model(model, qubits_count):
     qc = QuantumCircuit(qubits_count)
+    
+    init_unitary = execute(qc,unitary_backend).result().get_unitary()
+    unpacked_init_unitary = unpack_complex_matrix_to_array_of_real_image_numbers_pairs(init_unitary)
+
     list_of_possible_actions = cliffordt_actions_generator(qubits_count)
     for i in range(5):
         gi = np.random.randint(0, len(list_of_possible_actions))
         item = list_of_possible_actions[gi]
         qc.unitary(item['gate'], item['qubits'])
-    out_unitary = execute(qc,unitary_backend).result().get_unitary()
+    target_unitary = execute(qc,unitary_backend).result().get_unitary()
+    unpacked_target_unitary = unpack_complex_matrix_to_array_of_real_image_numbers_pairs(target_unitary)
+    observation = unpacked_init_unitary + unpacked_target_unitary
+    mvalue = 0
+    # pdb.set_trace()
+    qc = QuantumCircuit(qubits_count)
+    while mvalue < 0.99:
+        gi = np.argmax(model.predict([observation])[0])
+
+        item = list_of_possible_actions[gi]
+        qc.unitary(item['gate'], item['qubits'])
+
+        unitary = execute(qc,unitary_backend).result().get_unitary()
+        unpacked_unitary = unpack_complex_matrix_to_array_of_real_image_numbers_pairs(unitary)
+        observation = unpacked_unitary + unpacked_target_unitary
+
+        mvalue = metrics['trace_metric'](unitary, target_unitary)
+        print("Predicted action", gi)
+        print(f"Metric Value {mvalue}")
+        print("observation: ")
+        print(observation)
+        
 def unpack_complex_matrix_to_array_of_real_image_numbers_pairs(numpy_complex_matrix):
     flattened = numpy_complex_matrix.flatten()
     result = []
@@ -73,9 +106,6 @@ def load_dataset(dfs_dir):
 class Net(nn.Module):
     def __init__(self, l1=120, l2=84):
         super(Net, self).__init__()
-        # self.conv1 = nn.Conv2d(3, 6, 5)
-        # self.pool = nn.MaxPool2d(2, 2)
-        # self.conv2 = nn.Conv2d(6, 16, 5)
         self.fc1 = nn.Linear(16 * 5 * 5, l1)
         self.fc2 = nn.Linear(l1, l2)
         self.fc3 = nn.Linear(l2, 10)
@@ -93,15 +123,18 @@ def get_model(input_shape, output_shape):
     # This is identical to the following:
     model = tf.keras.Sequential()
     model.add(tf.keras.Input(shape=(256,)))
-    model.add(tf.keras.layers.Dense(1024))
-    model.add(tf.keras.layers.Dense(1024))
-    model.add(tf.keras.layers.Dense(1024))
-    model.add(tf.keras.layers.Dense(1024))
-    model.add(tf.keras.layers.Dense(1024))
+    model.add(tf.keras.layers.Dense(1024, activation='relu'))
+    model.add(tf.keras.layers.Dense(1024, activation='relu'))
+    model.add(tf.keras.layers.Dense(1024, activation='relu'))
+    model.add(tf.keras.layers.Dense(1024, activation='relu'))
+    model.add(tf.keras.layers.Dense(1024, activation='softmax'))
+    
     model.add(tf.keras.layers.Dense(output_shape))
-    model.compile(optimizer='rmsprop', loss='mse')
+    model.compile(optimizer='rmsprop', loss='mse', metrics='accuracy')
     return model
 
+
+qubits_count = 3
 [X, Y] = load_dataset(dfs_dir)
 
 # X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.33, random_state=42)
@@ -111,4 +144,6 @@ output_shape = len(Y.iloc[0])
 
 model = get_model(input_shape, output_shape)
 # pdb.set_trace()
-model.fit(np.array(X.to_list()), np.array(Y.to_list()), validation_split=0.2, epochs=10, batch_size=200)
+model.fit(np.array(X.to_list()), np.array(Y.to_list()), validation_split=0.2, epochs=10, batch_size=128)
+# test_model(model, qubits_count)
+model.save(f'models/model_{timestr}.model')
